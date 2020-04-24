@@ -33,6 +33,12 @@ router.route('/')
         Users.remove({})
             .then(() => {
                 Transactions.remove({})
+                    .then(transaction => {
+                        console.log("Transactions deleted after users")
+                    })
+                    .catch(err => {
+                        console.log(err)
+                    })
                 res.writeHead(200, { 'Content-Type': 'text/plain' })
                 res.end('All users deleted')
             })
@@ -70,7 +76,14 @@ router.route('/:id')
                 Transactions.find({ "user": req.params.id })
                     .then(transactions => {
                         transactions.forEach(element => {
+                            console.log(element._id)
                             Transactions.findByIdAndRemove(element._id)
+                                .then(transaction => {
+                                    console.log("deleted")
+                                })
+                                .catch(err => {
+                                    console.log(err)
+                                })
                         })
                     })
                     .catch(err => {

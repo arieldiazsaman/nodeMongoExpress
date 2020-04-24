@@ -59,6 +59,9 @@ router.route('/')
                                 return false
                             })
                             Users.findByIdAndUpdate(user._id, { 'transactions': user.transactions })
+                                .then(user => {
+                                    console.log("User updated after transaction deletion")
+                                })
                                 .catch(err => {
                                     console.log(err)
                                 })
