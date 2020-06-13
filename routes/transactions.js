@@ -2,180 +2,80 @@ const express = require('express')
 
 const Transactions = require('../models/transactions')
 const Users = require('../models/users')
+const asyncMiddleware = require('../utils/asyncMiddleware');
+const { patch } = require('./users');
 
 const router = express.Router()
-const getMethods = (obj) => {
-    let properties = new Set()
-    let currentObj = obj
-    do {
-        Object.getOwnPropertyNames(currentObj).map(item => properties.add(item))
-    } while ((currentObj = Object.getPrototypeOf(currentObj)))
-    return [...properties.keys()].filter(item => typeof obj[item] === 'function')
-}
+
 router.route('/')
-    .get(function (req, res, next) {
-        Transactions.find({})
-            .then(transactions => {
-                res.json(transactions)
-            })
-            .catch(err => {
-                console.log(err)
-            })
-    })
-    .post(function (req, res, next) {
+    .get(asyncMiddleware(async (req, res, next) => {
+        const transactions = await Transactions.find({})
+        res.json(transactions)
+    }))
+    .post(asyncMiddleware(async (req, res, next) => {
         const newTransaction = {
             description: req.body.description,
             user: req.body.user
         }
-        Transactions.create(newTransaction)
-            .then(transaction => {
-                Users.findById(req.body.user)
-                    .then(user => {
-                        transactions = user.transactions
-                        transactions.push(transaction._id)
-                        Users.findByIdAndUpdate(user._id, { 'transactions': transactions })
-                            .then(user => {
-                                res.json(transaction)
-                            })
-                            .catch(err => {
-                                console.log(err)
-                            })
-                    })
-                    .catch(err => {
-                        console.log(err)
-                    })
-            })
-            .catch(err => {
-                console.log(err)
-            })
-    })
-    .delete(function (req, res, next) {
-        Transactions.remove({})
-            .then(() => {
-                Users.find({})
-                    .then(users => {
-                        users.forEach(user => {
-                            user.transactions = user.transactions.filter(element => {
-                                return false
-                            })
-                            Users.findByIdAndUpdate(user._id, { 'transactions': user.transactions })
-                                .then(user => {
-                                    console.log("User updated after transaction deletion")
-                                })
-                                .catch(err => {
-                                    console.log(err)
-                                })
-                        })
-                        res.writeHead(200, { 'Content-Type': 'text/plain' })
-                        res.end('All transactions deleted')
-                    })
-                    .catch(err => {
-                        console.log(err)
-                    })
-            })
-            .catch(err => {
-                console.log(err)
-            })
-    })
+        const transaction = await Transactions.create(newTransaction)
+        const user = await Users.findById(req.body.user)
+        const userTransactions = user.transactions
+        userTransactions.push(transaction._id)
+        await Users.findByIdAndUpdate(user._id, {'transactions':userTransactions})
+        res.json(transaction)
+    }))
+    .delete(asyncMiddleware(async (req, res, next) => {
+        await Transactions.remove({})
+        const users = await Users.find({})
+        users.forEach(user => {
+            user.transactions = user.transactions.filter(element => {
+                return false;
+            });
+            await Users.findByIdAndUpdate(user._id, { 'transactions': user.transactions });
+        })
+        res.writeHead(200, { 'Content-Type': 'text/plain' })
+        res.end('All transactions deleted')
+    }))
+
 router.route('/:id')
-    .get(function (req, res, next) {
-        Transactions.findById(req.params.id)
-            .then(transaction => {
-                res.json(transaction)
-            })
-            .catch(err => {
-                console.log(err)
-            })
-    })
-    .put(function (req, res, next) {
-        const transaction = {
+    .get(asyncMiddleware(async (req, res, next) => {
+        const transaction = await Transactions.findById(req.params.id)
+        res.json(transaction)
+    }))
+    .patch(asyncMiddleware(async (req, res, next) => {
+        const newTransaction = {
             "description": req.body.description
         }
-        Transactions.findByIdAndUpdate(req.params.id, transaction)
-            .then(transaction => {
-                res.writeHead(200, { 'Content-Type': 'text/plain' })
-                res.end('Transaction updated')
-            })
-            .catch(err => {
-                console.log(err)
-            })
-    })
-    .delete(function (req, res, next) {
-        Transactions.findById(req.params.id)
-            .then(transaction => {
-                Users.findById(transaction.user)
-                    .then(user => {
-                        Transactions.findByIdAndRemove(req.params.id)
-                            .then(() => {
-                                user.transactions = user.transactions.filter(element => {
-                                    return element != req.params.id
-                                })
-                                Users.findByIdAndUpdate(user._id, { "transactions": user.transactions })
-                                    .then(user => {
-                                        res.writeHead(200, { 'Content-Type': 'text/plain' })
-                                        res.end('Transaction deleted')
-                                    })
-                                    .catch(err => {
-                                        console.log(err)
-                                    })
-                            })
-                            .catch(err => {
-                                console.log(err)
-                            })
-                    })
-                    .catch(err => {
-                        console.log()
-                    })
-            })
-            .catch(err => {
-                console.log(err)
-            })
-    })
-router.route('/:id/changeUser')
-    .put(function (req, res, next) {
-        Transactions.findById(req.params.id)
-            .then(transaction => {
-                Users.findById(transaction.user)
-                    .then(user1 => {
-                        Transactions.findByIdAndUpdate(req.params.id, { "user": req.body.user })
-                            .then(transaction => {
-                                user1.transactions = user1.transactions.filter(element => {
-                                    return element != req.params.id
-                                })
-                                Users.findByIdAndUpdate(user1._id, { "transactions": user1.transactions })
-                                    .then(user1 => {
-                                        Users.findById(req.body.user)
-                                            .then(user2 => {
-                                                user2.transactions.push(req.params.id)
-                                                Users.findByIdAndUpdate(user2._id, { "transactions": user2.transactions })
-                                                    .then(user2 => {
-                                                        res.writeHead(200, { 'Content-Type': 'text/plain' })
-                                                        res.end('User Changed')
-                                                    })
-                                                    .catch(err => {
-                                                        console.log(err)
-                                                    })
-                                            })
-                                            .catch(err => {
-                                                console.log(err)
-                                            })
-                                    })
-                                    .catch(err => {
-                                        console.log(err)
-                                    })
-                            })
-                            .catch(err => {
-                                console.log(err)
-                            })
-                    })
-                    .catch(err => {
-                        console.log(err)
-                    })
-            })
-            .catch(err => {
-                console.log(err)
-            })
-    })
+        await Transactions.findByIdAndUpdate(req.params.id, newTransaction)
+        res.writeHead(200, { 'Content-Type': 'text/plain' })
+        res.end('Transaction updated')
+    }))
+    .delete(asyncMiddleware(async (req, res, next) => {
+        const transaction = await Transactions.findById(req.params.id)
+        const user = await Users.findById(transaction.user)
+        await Transactions.findByIdAndRemove(req.params.id)
+        user.transactions = user.transactions.filter(element => {
+            return element != req.params.id
+        })
+        await Users.findByIdAndUpdate(user._id, {'transactions':user.transactions})
+        res.writeHead(200, { 'Content-Type': 'text/plain' })
+        res.end('Transaction deleted')
+    }))
 
+router.route('/:id/changeUser')
+    patch(asyncMiddleware(async (req, res, next) => {
+        const transaction = await Transactions.findById(req.params.id)
+        const user1 = await Users.findById(transaction.user)
+        await Transactions.findByIdAndUpdate(req.params.id, {'user':req.body.user})
+        user1.transactions = user1.transactions.filter(element => {
+            return element != req.params.id
+        })
+        await Users.findByIdAndUpdate(user1._id, {'transactions':user1.transactions})
+        const user2 = await Users.findById(req.body.user)
+        user2.transactions.push(req.params.id)
+        await Users.findByIdAndUpdate(user2._id, {'transactions':user2.transactions})
+        res.writeHead(200, { 'Content-Type': 'text/plain' })
+        res.end('User Changed')
+    }))
 
 module.exports = router

@@ -1,20 +1,3 @@
-Sumario de los ejercicios
-
-JAVASCRIPT
-
-1. Balancear llaves
-
-Archivo JAVASCRIPT/balancedGroupSymbols.js
-
-Puede probar diferentes inputs introduciendo otro valor en la constante "line"
-
-2. Arreglo del caracol
-
-Archivo JAVASCRIPT/snail.js
-
-Puede probar diferentes inputs cambiando los valores de las matrices y las dimensiones correspondientes
-
-
 NODE JS
 
 1. Realizar una API REST para transacciones y usuarios
@@ -64,7 +47,7 @@ Para modificar una transacción
 
 URL http://localhost:8081/transactions/:id
 
-METHOD PUT
+METHOD PATCH
 
 BODY(JSON) {
 				"description": "New description"
@@ -106,7 +89,7 @@ METHOD GET
 
 URL http://localhost:8081/transactions/:id/changeUser
 
-METHOD PUT
+METHOD PATCH
 
 BODY(JSON) {
 				"user": 2
