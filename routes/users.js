@@ -44,9 +44,9 @@ router.route('/:id')
     .delete(asyncMiddleware(async (req, res, next) => {
         await Users.findByIdAndRemove(req.params.id)
         const transactions = await Transactions.find({"user":req.params.id})
-        transactions.forEach(async element => {
-            Transactions.findByIdAndRemove(element._id)
-        })
+        for(let i = 0; i < transactions.length; i++){
+            await Transactions.findByIdAndRemove(transactions[i]._id)
+        }
         res.writeHead(200, { 'Content-Type': 'text/plain' })
         res.end('User deleted')
     }))

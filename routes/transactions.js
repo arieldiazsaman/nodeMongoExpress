@@ -27,12 +27,12 @@ router.route('/')
     .delete(asyncMiddleware(async (req, res, next) => {
         await Transactions.remove({})
         const users = await Users.find({})
-        users.forEach(user => {
-            user.transactions = user.transactions.filter(element => {
-                return false;
-            });
-            await Users.findByIdAndUpdate(user._id, { 'transactions': user.transactions });
-        })
+        for(let i = 0 ; i < users.length; i++){
+            users[i].transactions = users[i].transactions.filter(element => {
+                return false
+            })
+            await Users.findByIdAndUpdate(users[i]._id, { 'transactions': users[i].transactions })
+        }
         res.writeHead(200, { 'Content-Type': 'text/plain' })
         res.end('All transactions deleted')
     }))
