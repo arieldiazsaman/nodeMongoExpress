@@ -21,18 +21,15 @@ router.route('/')
         const user = await Users.findById(req.body.user)
         const userTransactions = user.transactions
         userTransactions.push(transaction._id)
-        await Users.findByIdAndUpdate(user._id, {'transactions':userTransactions})
+        await Users.findByIdAndUpdate(user._id, { 'transactions': userTransactions })
         res.json(transaction)
     }))
     .delete(asyncMiddleware(async (req, res, next) => {
         await Transactions.remove({})
         const users = await Users.find({})
-        for(let i = 0 ; i < users.length; i++){
-            users[i].transactions = users[i].transactions.filter(element => {
-                return false
-            })
-            await Users.findByIdAndUpdate(users[i]._id, { 'transactions': users[i].transactions })
-        }
+        users.forEach(({ _id }) => {
+            await Users.findByIdAndUpdate(_id, { 'transactions': [] })
+        })
         res.writeHead(200, { 'Content-Type': 'text/plain' })
         res.end('All transactions deleted')
     }))
@@ -54,28 +51,28 @@ router.route('/:id')
         const transaction = await Transactions.findById(req.params.id)
         const user = await Users.findById(transaction.user)
         await Transactions.findByIdAndRemove(req.params.id)
-        user.transactions = user.transactions.filter(element => {
-            return element != req.params.id
+        user.transactions = user.transactions.filter(id => {
+            return id != req.params.id
         })
-        await Users.findByIdAndUpdate(user._id, {'transactions':user.transactions})
+        await Users.findByIdAndUpdate(user._id, { 'transactions': user.transactions })
         res.writeHead(200, { 'Content-Type': 'text/plain' })
         res.end('Transaction deleted')
     }))
 
 router.route('/:id/changeUser')
-    patch(asyncMiddleware(async (req, res, next) => {
-        const transaction = await Transactions.findById(req.params.id)
-        const user1 = await Users.findById(transaction.user)
-        await Transactions.findByIdAndUpdate(req.params.id, {'user':req.body.user})
-        user1.transactions = user1.transactions.filter(element => {
-            return element != req.params.id
-        })
-        await Users.findByIdAndUpdate(user1._id, {'transactions':user1.transactions})
-        const user2 = await Users.findById(req.body.user)
-        user2.transactions.push(req.params.id)
-        await Users.findByIdAndUpdate(user2._id, {'transactions':user2.transactions})
-        res.writeHead(200, { 'Content-Type': 'text/plain' })
-        res.end('User Changed')
-    }))
+patch(asyncMiddleware(async (req, res, next) => {
+    const transaction = await Transactions.findById(req.params.id)
+    const user1 = await Users.findById(transaction.user)
+    await Transactions.findByIdAndUpdate(req.params.id, { 'user': req.body.user })
+    user1.transactions = user1.transactions.filter(id => {
+        return id != req.params.id
+    })
+    await Users.findByIdAndUpdate(user1._id, { 'transactions': user1.transactions })
+    const user2 = await Users.findById(req.body.user)
+    user2.transactions.push(req.params.id)
+    await Users.findByIdAndUpdate(user2._id, { 'transactions': user2.transactions })
+    res.writeHead(200, { 'Content-Type': 'text/plain' })
+    res.end('User Changed')
+}))
 
 module.exports = router
